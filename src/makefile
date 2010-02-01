@@ -5,9 +5,12 @@ OPENCV=/opt/opencv
 LINKLIB=-L"$(OPENCV)/lib"
 CXXFLAGS=-I"$(OPENCV)/include/opencv" -I"/usr/local/include"
 
-all: pwbcreate
+all: pwbcreate pwbdetect
 
 pwbcreate: pwbcreate.o
+	$(CXX) $(CXXFLAGS) $(LINKLIB) -o $@ $^ $(LINKFLAG)
+
+pwbdetect: pwbdetect.o
 	$(CXX) $(CXXFLAGS) $(LINKLIB) -o $@ $^ $(LINKFLAG)
 
 clean:
