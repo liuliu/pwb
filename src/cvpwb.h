@@ -1,4 +1,4 @@
-#ifdef _GUARD_cvpwb_h_
+#ifndef _GUARD_cvpwb_h_
 #define _GUARD_cvpwb_h_
 
 #include <cv.h>

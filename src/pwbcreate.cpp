@@ -1,5 +1,7 @@
 #include <cv.h>
 #include <highgui.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
 #include <gsl/gsl_qrng.h>
 
 int main(int argc, char** argv)
@@ -17,19 +19,44 @@ int main(int argc, char** argv)
 	}
 	gsl_qrng_free(q);
 */
-	CvPoint2D32f src[4], dst[4];
+	gsl_rng_env_setup();
+
+	const gsl_rng_type* T = gsl_rng_default;
+	gsl_rng* r = gsl_rng_alloc(T);
+	gsl_rng_set(r, time(NULL));
+
+	double sigma = 0.1 * ((image->width < image->height) ? image->width : image->height);
+
+	CvPoint2D32f src[4], dst[4], rds[4];
 	src[0].x = 0; src[0].y = 0;
 	src[1].x = image->width; src[1].y = 0;
 	src[2].x = image->width; src[2].y = image->height;
 	src[3].x = 0; src[3].y = image->height;
-	dst[0].x = -20; dst[0].y = -20;
-	dst[1].x = image->width; dst[1].y = 0;
-	dst[2].x = image->width; dst[2].y = image->height;
-	dst[3].x = 0; dst[3].y = image->height;
+	dst[0].x = -image->width / 2 + gsl_ran_gaussian(r, sigma); dst[0].y = -image->height / 2 + gsl_ran_gaussian(r, sigma);
+	dst[1].x = image->width / 2 + gsl_ran_gaussian(r, sigma); dst[1].y = -image->height / 2 + gsl_ran_gaussian(r, sigma);
+	dst[2].x = image->width / 2 + gsl_ran_gaussian(r, sigma); dst[2].y = image->height / 2 + gsl_ran_gaussian(r, sigma);
+	dst[3].x = -image->width / 2 + gsl_ran_gaussian(r, sigma); dst[3].y = image->height / 2 + gsl_ran_gaussian(r, sigma);
+	double radius = gsl_ran_gaussian(r, 3.1415926 / 8.0);
+	double minx = 0, miny = 0, maxx = 0, maxy = 0;
+	for (int i = 0; i < 4; i++)
+	{
+		rds[i].x = dst[i].x * cos(radius) - dst[i].y * sin(radius);
+		rds[i].y = dst[i].x * sin(radius) + dst[i].y * cos(radius);
+		if (rds[i].x < minx) minx = rds[i].x;
+		if (rds[i].y < miny) miny = rds[i].y;
+		if (rds[i].x > maxx) maxx = rds[i].x;
+		if (rds[i].y > maxy) maxy = rds[i].y;
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		rds[i].x -= minx;
+		rds[i].y -= miny;
+	}
+	gsl_rng_free(r);
 	float _m[9];
 	CvMat m = cvMat(3, 3, CV_32FC1, _m);
-	cvGetPerspectiveTransform(src, dst, &m);
-	IplImage* transformed = cvCreateImage(cvGetSize(image), IPL_DEPTH_8U, 3);
+	cvGetPerspectiveTransform(src, rds, &m);
+	IplImage* transformed = cvCreateImage(cvSize(maxx - minx, maxy - miny), IPL_DEPTH_8U, 3);
 	cvWarpPerspective(image, transformed, &m);
 	cvShowImage("result", transformed);
 	cvWaitKey(0);
